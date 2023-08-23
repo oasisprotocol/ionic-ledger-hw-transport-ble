@@ -1,6 +1,16 @@
-import baseConfig from "../../jest.config";
+const config = {
+  rootDir: './',
+  modulePaths: ['<rootDir>/src'],
+  moduleFileExtensions: ['ts', 'js'],
+  clearMocks: true,
+  resetMocks: true,
+  transform: {
+    '^.+\\.(js|jsx|mjs|cjs|ts|tsx)$': ['ts-jest'],
+  },
+  testPathIgnorePatterns: [
+    '/node_modules/',
+  ],
+  testTimeout: 60000
+}
 
-export default {
-  ...baseConfig,
-  rootDir: __dirname,
-};
+module.exports = config
