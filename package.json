@@ -24,12 +24,13 @@
     "@ledgerhq/hw-transport": "^6.28.8"
   },
   "scripts": {
-    "clean": "rimraf lib",
     "build": "tsc",
-    "watch": "tsc --watch",
+    "checkTs": "tsc --noEmit",
+    "clean": "rimraf lib",
     "lint": "eslint --ext ts ./src",
     "lint:fix": "yarn lint --fix",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "watch": "tsc --watch"
   },
   "devDependencies": {
     "@capacitor/core": "^5.2.3",
