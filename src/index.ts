@@ -175,6 +175,8 @@ export default class BleTransport extends Transport {
   static isSupported = (): Promise<boolean> =>
     Promise.resolve(typeof BleClient === "object");
 
+  static isEnabled = (): Promise<boolean> => bleInstance().isEnabled()
+
   static connect = (deviceId: string, onDisconnect: (deviceId: string) => void): Promise<void> => {
     return bleInstance().connect(deviceId, onDisconnect);
   }
