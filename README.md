@@ -32,7 +32,7 @@ Here is a gist of the most important parts required.
 ### Check for Bluetooth state
 
 ```ts
-import BleTransport from "@ledgerhq/react-native-hw-transport-ble";
+import BleTransport from "@oasisprotocol/ionic-ledger-hw-transport-ble";
 
 // Check if @capacitor-community/bluetooth-le is setup
 BleTransport.isSupported()
@@ -44,14 +44,14 @@ BleTransport.isEnabled()
 ### Scan for devices
 
 ```ts
-const scannedDevices = TransportBLE.list()
+const scannedDevices = BleTransport.list()
 ```
 
 ### Connect to device
 
 ```ts
 const [scannedDevice] = scannedDevices
-const transport = await TransportBLE.open(scannedDevice)
+const transport = await BleTransport.open(scannedDevice)
 ```
 
 **and now we can just use the transport like any other Ledger transport!**
