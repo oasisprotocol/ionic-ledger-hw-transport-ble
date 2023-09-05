@@ -26,6 +26,7 @@ jobs:
         with:
           node-version: '20.x'
           cache: yarn
+          always-auth: true
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Build app
@@ -34,6 +35,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc && \
           yarn publish \
             --tag latest \
             --access public
