@@ -35,6 +35,9 @@ jest.mock("@capacitor-community/bluetooth-le", () => {
         startNotificationCb = callback
         return Promise.resolve()
       },
+      stopNotifications(): Promise<void> {
+        return Promise.resolve()
+      },
       writeWithoutResponse(deviceId: string, service: string, characteristic: string, value: DataView): Promise<void> {
         const hex = Buffer.from(value.buffer, value.byteOffset, value.byteLength).toString('hex')
         let buffer: Buffer;
