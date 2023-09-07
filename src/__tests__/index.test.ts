@@ -1,5 +1,10 @@
+import * as BleTransportRoot from "../index";
 import BleTransport from "../index";
-import {ScanResult, BleClientInterface} from "@capacitor-community/bluetooth-le";
+import {ScanResult, BleClientInterface, BleClient} from "@capacitor-community/bluetooth-le";
+import {Observable} from "rxjs";
+import {
+  finalize
+} from "rxjs/operators";
 
 interface Timeout extends NodeJS.Timeout {
   _destroyed: boolean
@@ -172,5 +177,34 @@ describe("BleTransport connectivity test coverage", () => {
 
       asyncFn();
     });
+
+    it("should disconnect from notification channel on close", done => {
+      jest.spyOn(BleTransportRoot, "monitorCharacteristic")
+        .mockImplementation(
+          (
+            deviceId: string,
+            service: string,
+            characteristic: string
+          ) => {
+            const monitorCharacteristicObs$ = new Observable<Buffer>(subscriber => {
+              BleClient.startNotifications(deviceId, service, characteristic, rawData => {
+                const value = Buffer.from(rawData.buffer, rawData.byteOffset, rawData.byteLength);
+                subscriber.next(value);
+              })
+            });
+
+            return monitorCharacteristicObs$.pipe(
+              finalize(done)
+            )
+          }
+        );
+
+      async function asyncFn() {
+        const transport = await BleTransport.open(scanResult);
+        await transport.close();
+      }
+
+      asyncFn()
+    })
   });
 });
