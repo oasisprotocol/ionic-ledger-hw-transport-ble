@@ -16,7 +16,6 @@ import {
   first,
   map,
   tap,
-  finalize,
 } from "rxjs/operators";
 import {
   CantOpenDevice,
@@ -39,11 +38,11 @@ export const monitorCharacteristic = (
       const value = Buffer.from(rawData.buffer, rawData.byteOffset, rawData.byteLength);
       subscriber.next(value);
     })
-  }).pipe(
-    finalize(() => {
-      BleClient.stopNotifications(deviceId, service, characteristic);
-    })
-  );
+
+    return async () => {
+      await BleClient.stopNotifications(deviceId, service, characteristic);
+    }
+  });
 }
 
 
