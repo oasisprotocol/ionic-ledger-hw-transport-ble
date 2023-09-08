@@ -1,14 +1,11 @@
-import * as BleTransportRoot from "../index";
 import BleTransport from "../index";
-import {ScanResult, BleClientInterface, BleClient} from "@capacitor-community/bluetooth-le";
-import {Observable} from "rxjs";
-import {
-  finalize
-} from "rxjs/operators";
+import {ScanResult, BleClientInterface} from "@capacitor-community/bluetooth-le";
 
 interface Timeout extends NodeJS.Timeout {
   _destroyed: boolean
 }
+
+const stopNotificationMock = jest.fn().mockImplementation(() => Promise.resolve());
 
 jest.mock("@capacitor-community/bluetooth-le", () => {
   let startNotificationCb = (_: DataView) => {
@@ -36,7 +33,7 @@ jest.mock("@capacitor-community/bluetooth-le", () => {
         return Promise.resolve()
       },
       stopNotifications(): Promise<void> {
-        return Promise.resolve()
+        return stopNotificationMock()
       },
       writeWithoutResponse(deviceId: string, service: string, characteristic: string, value: DataView): Promise<void> {
         const hex = Buffer.from(value.buffer, value.byteOffset, value.byteLength).toString('hex')
@@ -182,32 +179,18 @@ describe("BleTransport connectivity test coverage", () => {
     });
 
     it("should disconnect from notification channel on close", done => {
-      jest.spyOn(BleTransportRoot, "monitorCharacteristic")
-        .mockImplementation(
-          (
-            deviceId: string,
-            service: string,
-            characteristic: string
-          ) => {
-            const monitorCharacteristicObs$ = new Observable<Buffer>(subscriber => {
-              BleClient.startNotifications(deviceId, service, characteristic, rawData => {
-                const value = Buffer.from(rawData.buffer, rawData.byteOffset, rawData.byteLength);
-                subscriber.next(value);
-              })
-            });
-
-            return monitorCharacteristicObs$.pipe(
-              finalize(done)
-            )
-          }
-        );
-
       async function asyncFn() {
         const transport = await BleTransport.open(scanResult);
+
+        transport.on("disconnect", () => {
+          expect(stopNotificationMock).toBeCalledTimes(1)
+          done()
+        });
+
         await transport.close();
       }
 
-      asyncFn()
+      asyncFn();
     })
   });
 });
