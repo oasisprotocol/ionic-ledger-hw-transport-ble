@@ -338,14 +338,14 @@ export default class BleTransport extends Transport {
     if (this.writeCmdCharacteristic) {
       try {
         const data = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
-        return bleInstance().writeWithoutResponse(this.device.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeCmdUuid, data)
+        return await bleInstance().writeWithoutResponse(this.device.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeCmdUuid, data)
       } catch (e) {
         throw new DisconnectedDeviceDuringOperation(String(e));
       }
     } else {
       try {
         const data = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
-        bleInstance().write(this.device.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeUuid, data)
+        return await bleInstance().write(this.device.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeUuid, data)
       } catch (e) {
         throw new DisconnectedDeviceDuringOperation(String(e));
       }
