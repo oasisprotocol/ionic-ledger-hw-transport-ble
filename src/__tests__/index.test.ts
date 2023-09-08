@@ -1,4 +1,4 @@
-import BleTransport from "../src/BleTransport";
+import BleTransport from "../";
 import { Subscription } from "rxjs";
 
 /**
