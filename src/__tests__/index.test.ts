@@ -138,16 +138,16 @@ jest.mock("react-native-ble-plx", () => {
                         throw new BleError(22, "Device is not connected");
 
                       const hex = Buffer.from(raw, "base64").toString("hex");
-                      let value: Buffer;
+                      let buffer: Buffer;
 
                       switch (hex) {
                         // MTU handshake
                         case "0800000000":
-                          value = Buffer.from("080000000199", "hex");
+                          buffer = Buffer.from("080000000199", "hex");
                           break;
                         // getAppAndVersion - returning BOLOS on 1.0.0-rc9
                         case "0500000005b010000000":
-                          value = Buffer.from(
+                          buffer = Buffer.from(
                             "05000000130105424f4c4f5309312e302e302d7263399000",
                             "hex",
                           );
@@ -165,7 +165,7 @@ jest.mock("react-native-ble-plx", () => {
                       }
                       // Introduce some logic to actually respond.
                       callbacks?.onDeviceResponse(null, {
-                        value,
+                        value: buffer,
                       });
                     },
                   },
