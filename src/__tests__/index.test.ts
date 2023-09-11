@@ -5,6 +5,8 @@ interface Timeout extends NodeJS.Timeout {
   _destroyed: boolean
 }
 
+const stopNotificationMock = jest.fn().mockImplementation(() => Promise.resolve());
+
 jest.mock("@capacitor-community/bluetooth-le", () => {
   let startNotificationCb = (_: DataView) => {
   };
@@ -29,6 +31,9 @@ jest.mock("@capacitor-community/bluetooth-le", () => {
       startNotifications(deviceId: string, service: string, characteristic: string, callback: (value: DataView) => void): Promise<void> {
         startNotificationCb = callback
         return Promise.resolve()
+      },
+      stopNotifications(): Promise<void> {
+        return stopNotificationMock()
       },
       writeWithoutResponse(deviceId: string, service: string, characteristic: string, value: DataView): Promise<void> {
         const hex = Buffer.from(value.buffer, value.byteOffset, value.byteLength).toString('hex')
@@ -172,5 +177,20 @@ describe("BleTransport connectivity test coverage", () => {
 
       asyncFn();
     });
+
+    it("should disconnect from notification channel on close", done => {
+      async function asyncFn() {
+        const transport = await BleTransport.open(scanResult);
+
+        transport.on("disconnect", () => {
+          expect(stopNotificationMock).toBeCalledTimes(1)
+          done()
+        });
+
+        await transport.close();
+      }
+
+      asyncFn();
+    })
   });
 });
