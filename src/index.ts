@@ -9,7 +9,7 @@ import {
 } from "@ledgerhq/devices";
 import type {DeviceModel} from "@ledgerhq/devices";
 import {log} from "@ledgerhq/logs";
-import {Observable, defer, merge, from, Subject} from "rxjs";
+import {Observable, defer, merge, from, Subject, firstValueFrom} from "rxjs";
 import {
   share,
   ignoreElements,
@@ -275,10 +275,16 @@ export default class BleTransport extends Transport {
         const msgIn = apdu.toString("hex");
         log("apdu", `=> ${msgIn}`);
 
-        const data: Buffer = await merge<Buffer>(
+        const dataObservable: Observable<Buffer> = merge(
           this.notifyObservable.pipe(receiveAPDU),
           sendAPDU(this.write, apdu, this.mtuSize)
-        ).toPromise();
+        );
+
+        const data: Buffer = await firstValueFrom(dataObservable);
+
+        if (!data) {
+          throw new Error("Received data is undefined");
+        }
 
         const msgOut = data.toString("hex");
         log("apdu", `<= ${msgOut}`);
@@ -299,7 +305,7 @@ export default class BleTransport extends Transport {
 
     await this.exchangeAtomicImpl(async () => {
       try {
-        mtu = await merge(
+        const mtuObservable: Observable<number> = merge(
           this.notifyObservable.pipe(
             tap((maybeError) => {
               if (maybeError instanceof Error) throw maybeError;
@@ -310,7 +316,13 @@ export default class BleTransport extends Transport {
           defer(() => from(this.write(Buffer.from([0x08, 0, 0, 0, 0])))).pipe(
             ignoreElements()
           )
-        ).toPromise();
+        );
+
+        mtu = await firstValueFrom(mtuObservable);
+
+        if (mtu === undefined) {
+          throw new Error("MTU negotiation failed, received undefined");
+        }
       } catch (e) {
         log("ble-error", "inferMTU got " + JSON.stringify(e));
 
