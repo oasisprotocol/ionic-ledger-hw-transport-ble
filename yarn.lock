@@ -302,17 +302,17 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@capacitor-community/bluetooth-le@^6.0.0":
-  version "6.0.0"
-  resolved "https://registry.yarnpkg.com/@capacitor-community/bluetooth-le/-/bluetooth-le-6.0.0.tgz#1ef3c1600ad9b76718150bae4a1adebf8c0a9dc6"
-  integrity sha512-oMVqMSQ5w05odnc8Dq+OGgsFGbxolohB6XfcyjOP/8s5htckksjsApcbbyVvcyWkWHr4CU6YCA9cwhSHH3rQYg==
+"@capacitor-community/bluetooth-le@^7.0.0":
+  version "7.2.0"
+  resolved "https://registry.yarnpkg.com/@capacitor-community/bluetooth-le/-/bluetooth-le-7.2.0.tgz#30104077c9e244ae1e4bba4e7ce71f6524cf3df2"
+  integrity sha512-eBM0Ia6C68YKqYbGjy6xgjaBrCvfH9EICn77EqxpR3Pu9yniRGTlCuZQdcCAonLwp16uuyAh/5tESxkkVJMccA==
   dependencies:
     "@types/web-bluetooth" "^0.0.20"
 
-"@capacitor/core@^6.0.0":
-  version "6.0.0"
-  resolved "https://registry.yarnpkg.com/@capacitor/core/-/core-6.0.0.tgz#abfaf1013cec686cf9743cf4fdc445d10e2f13ea"
-  integrity sha512-NvxIQsJcMiIV+Le1DilR2GGyQQbDInfXK1UywGROQ5mycdFlW5XoAPZ+MKnFGB123RoEgE3uhDGgwTXUmSlX9A==
+"@capacitor/core@^7.0.0":
+  version "7.4.4"
+  resolved "https://registry.yarnpkg.com/@capacitor/core/-/core-7.4.4.tgz#b752dd7a12141e40d1c8ce2e37a79571d9f83518"
+  integrity sha512-xzjxpr+d2zwTpCaN0k+C6wKSZzWFAb9OVEUtmO72ihjr/NEDoLvsGl4WLfjWPcCO2zOy0b2X52tfRWjECFUjtw==
   dependencies:
     tslib "^2.1.0"
 
