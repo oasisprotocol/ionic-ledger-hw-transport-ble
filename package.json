@@ -1,6 +1,6 @@
 {
   "name": "@oasisprotocol/ionic-ledger-hw-transport-ble",
-  "version": "6.0.0",
+  "version": "7.0.0",
   "description": "Ledger Hardware Wallet Bluetooth BLE transport for Ionic",
   "keywords": [
     "Ledger",
@@ -25,7 +25,7 @@
   ],
   "license": "Apache-2.0",
   "dependencies": {
-    "@capacitor-community/bluetooth-le": "^6.0.0",
+    "@capacitor-community/bluetooth-le": "^7.0.0",
     "@ledgerhq/hw-transport": "^6.28.8"
   },
   "scripts": {
@@ -38,7 +38,7 @@
     "watch": "tsc --watch"
   },
   "devDependencies": {
-    "@capacitor/core": "^6.0.0",
+    "@capacitor/core": "^7.0.0",
     "@types/jest": "^29.5.4",
     "@types/node": "^20.5.3",
     "@typescript-eslint/eslint-plugin": "^6.4.1",
