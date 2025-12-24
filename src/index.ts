@@ -131,7 +131,7 @@ const open = async (scanResult: ScanResult): Promise<BleTransport> => {
     );
   }
 
-  if (!writeUuid) {
+  if (!writeCmdUuid) {
     throw new TransportError(
       "write cmd characteristic not found",
       "BLECharacteristicInvalid"
