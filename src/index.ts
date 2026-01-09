@@ -45,7 +45,7 @@ export const monitorCharacteristic = (
   });
 }
 
-
+let previousScanResult: BleDevice | null = null;
 const transportsCache: { [deviceId: string]: BleTransport } = {};
 
 let _bleClient: typeof BleClient | null = null;
@@ -180,9 +180,19 @@ export default class BleTransport extends Transport {
   static async create(): Promise<BleTransport> {
     log(TAG, "Requesting BLE device");
     try {
-      const scanResult = await bleInstance().requestDevice({ services: getBluetoothServiceUuids() }); // Shows native device selection UI
+      // Similar to TransportWebUSB.create > TransportWebUSB.listen > getFirstLedgerDevice > navigator.usb.getDevices[0] || navigator.usb.requestDevice
+      const scanResult =
+        (await bleInstance().getConnectedDevices(getBluetoothServiceUuids()))?.[0] || // If not `BleTransport.disconnect`-ed yet
+        previousScanResult || // If disconnected but device is still findable
+        (await bleInstance().requestDevice({ services: getBluetoothServiceUuids() })); // Shows native device selection UI
       log(TAG, `BLE device selected: ${scanResult.deviceId}`);
-      return open(scanResult);
+      return open(scanResult).catch(async () => {
+        // Possibly failed just because previousScanResult is offline (after 10s default timeout). Try to request device again before fully failing.
+        return open(await bleInstance().requestDevice({ services: getBluetoothServiceUuids() }));
+      }).then((transport) => {
+        previousScanResult = transport.device;
+        return transport;
+      });
     } catch (err) {
       log(TAG, `BLE device request failed: ${String(err)}`);
       throw new CantOpenDevice(String(err));
