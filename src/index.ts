@@ -84,17 +84,22 @@ const open = async (scanResult: BleDevice): Promise<BleTransport> => {
     throw new CantOpenDevice();
   }
 
-  let bluetoothInfos: BluetoothInfos | undefined;
-  let characteristics: string[] | undefined = [];
 
+  let availableServiceUuids: string[] = [];
+  try {
+    // scanResult.uuids seems to be missing when coming from requestDevice
+    const services = await bleInstance().getServices(scanResult.deviceId);
+    availableServiceUuids = services.map(service => service.uuid);
+    log(TAG, `Discovered services: ${JSON.stringify(availableServiceUuids)}`);
+  } catch (error) {
+    log(TAG, `Failed to get services: ${String(error)}`);
+  }
+
+  let bluetoothInfos: BluetoothInfos | undefined;
   for (const uuid of getBluetoothServiceUuids()) {
-    if (scanResult.uuids) {
-      const peripheralCharacteristic = scanResult.uuids.filter((service) => service === uuid);
-      if (peripheralCharacteristic.length) {
-        characteristics.push(...peripheralCharacteristic)
-        bluetoothInfos = getInfosForServiceUuid(uuid);
-        break;
-      }
+    if (availableServiceUuids.includes(uuid)) {
+      bluetoothInfos = getInfosForServiceUuid(uuid);
+      break;
     }
   }
 
@@ -103,19 +108,6 @@ const open = async (scanResult: BleDevice): Promise<BleTransport> => {
   }
 
   const {deviceModel, serviceUuid, writeUuid, writeCmdUuid, notifyUuid} = bluetoothInfos;
-
-  if (!characteristics) {
-    if (scanResult.uuids) {
-      const characteristic = scanResult.uuids.find((uuid) => uuid === serviceUuid)
-      if (characteristic) {
-        characteristics = [characteristic];
-      }
-    }
-  }
-
-  if (!characteristics.length) {
-    throw new TransportError("service not found", "BLEServiceNotFound");
-  }
 
   if (!writeUuid) {
     throw new TransportError(
