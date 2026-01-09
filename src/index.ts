@@ -22,7 +22,7 @@ import {
   TransportError,
   DisconnectedDeviceDuringOperation,
 } from "@ledgerhq/errors";
-import {ScanResult} from "@capacitor-community/bluetooth-le/dist/esm/definitions";
+import {BleDevice} from "@capacitor-community/bluetooth-le/dist/esm/definitions";
 
 const TAG = "ble-verbose";
 
@@ -68,14 +68,14 @@ const clearDisconnectTimeout = (deviceId: string): void => {
   }
 };
 
-const open = async (scanResult: ScanResult): Promise<BleTransport> => {
+const open = async (scanResult: BleDevice): Promise<BleTransport> => {
   log(TAG, `Tries to open device: ${scanResult}`);
 
   const closedSubscription = new Subject<void>()
 
   try {
     log(TAG, `connectToDevice(${scanResult})`);
-    await BleTransport.connect(scanResult.device.deviceId, () => {
+    await BleTransport.connect(scanResult.deviceId, () => {
       closedSubscription.next()
     })
   } catch (error) {
@@ -138,7 +138,7 @@ const open = async (scanResult: ScanResult): Promise<BleTransport> => {
     );
   }
 
-  const notifyObservable = monitorCharacteristic(scanResult.device.deviceId, serviceUuid, notifyUuid).pipe(
+  const notifyObservable = monitorCharacteristic(scanResult.deviceId, serviceUuid, notifyUuid).pipe(
     share()
   );
   const notifySubscription = notifyObservable.subscribe();
@@ -185,35 +185,19 @@ export default class BleTransport extends Transport {
     return bleInstance().connect(deviceId, onDisconnect);
   }
 
-  static list = (stopScanTimeout = BleTransport.disconnectTimeoutMs): Promise<ScanResult[]> => {
-    let devices: ScanResult[] = []
+  static async create(): Promise<BleTransport> {
+    log(TAG, "Requesting BLE device");
+    try {
+      const scanResult = await bleInstance().requestDevice({ services: getBluetoothServiceUuids() }); // Shows native device selection UI
+      log(TAG, `BLE device selected: ${scanResult.deviceId}`);
+      return open(scanResult);
+    } catch (err) {
+      log(TAG, `BLE device request failed: ${String(err)}`);
+      throw new CantOpenDevice(String(err));
+    }
+  }
 
-    return new Promise((resolve, reject) => {
-      bleInstance().requestLEScan({services: getBluetoothServiceUuids()}, data => {
-        devices = [
-          ...devices.filter(prevDevice => prevDevice.device.deviceId !== data.device.deviceId),
-          data
-        ]
-
-      });
-
-      setTimeout(async () => {
-          await bleInstance().stopLEScan()
-          try {
-            log(TAG, 'BLE scan complete')
-            resolve(devices);
-          } catch (err) {
-            log(TAG, 'BLE scan failed')
-            reject(err)
-          }
-        },
-        stopScanTimeout,
-      );
-
-    })
-  };
-
-  static async open(scanResult: ScanResult): Promise<BleTransport> {
+  static async open(scanResult: BleDevice): Promise<BleTransport> {
     return open(scanResult);
   }
 
@@ -227,7 +211,7 @@ export default class BleTransport extends Transport {
     log(TAG, "disconnected");
   };
 
-  device: ScanResult;
+  device: BleDevice;
   deviceModel: DeviceModel;
   disconnectTimeout: null | ReturnType<typeof setTimeout> = null;
   id: string;
@@ -239,7 +223,7 @@ export default class BleTransport extends Transport {
   bluetoothInfos: BluetoothInfos;
 
   constructor(
-    device: ScanResult,
+    device: BleDevice,
     writeCharacteristic: string,
     writeCmdCharacteristic: string | undefined,
     notifyObservable: Observable<Buffer>,
@@ -247,7 +231,7 @@ export default class BleTransport extends Transport {
     bluetoothInfos: BluetoothInfos
   ) {
     super();
-    this.id = device.device.deviceId;
+    this.id = device.deviceId;
     this.device = device;
     this.writeCharacteristic = writeCharacteristic;
     this.writeCmdCharacteristic = writeCmdCharacteristic;
@@ -327,7 +311,7 @@ export default class BleTransport extends Transport {
         log("ble-error", "inferMTU got " + JSON.stringify(e));
 
         try {
-          await bleInstance().disconnect(this.device.device.deviceId)
+          await bleInstance().disconnect(this.device.deviceId)
         } catch (ex) {
           // Ignore error
         }
@@ -354,14 +338,14 @@ export default class BleTransport extends Transport {
     if (this.writeCmdCharacteristic) {
       try {
         const data = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
-        return await bleInstance().writeWithoutResponse(this.device.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeCmdUuid, data)
+        return await bleInstance().writeWithoutResponse(this.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeCmdUuid, data)
       } catch (e) {
         throw new DisconnectedDeviceDuringOperation(String(e));
       }
     } else {
       try {
         const data = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
-        return await bleInstance().write(this.device.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeUuid, data)
+        return await bleInstance().write(this.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeUuid, data)
       } catch (e) {
         throw new DisconnectedDeviceDuringOperation(String(e));
       }
