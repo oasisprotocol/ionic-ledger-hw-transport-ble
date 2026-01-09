@@ -1,5 +1,5 @@
 import BleTransport from "../index";
-import {ScanResult, BleClientInterface} from "@capacitor-community/bluetooth-le";
+import {BleDevice, BleClientInterface} from "@capacitor-community/bluetooth-le";
 
 interface Timeout extends NodeJS.Timeout {
   _destroyed: boolean
@@ -23,6 +23,9 @@ jest.mock("@capacitor-community/bluetooth-le", () => {
           onDisconnectCb = onDisconnect
         }
         return Promise.resolve()
+      },
+      getServices(_deviceId) {
+        return Promise.resolve([{ uuid: "13d63400-2c97-3004-0000-4c6564676572", characteristics: [] }]);
       },
       disconnect(deviceId): Promise<void> {
         onDisconnectCb(deviceId);
@@ -70,15 +73,9 @@ jest.mock("@capacitor-community/bluetooth-le", () => {
 });
 
 describe("BleTransport connectivity test coverage", () => {
-  const scanResult: ScanResult = {
-    device: {
-      deviceId: 'XX:XX:XX:XX:XX:XX',
-      name: 'Nano X BXAX',
-    },
-    localName: 'Nano X BXAX',
-    rssi: -50,
-    txPower: 100,
-    uuids: ['13d63400-2c97-6004-0000-4c6564676572']
+  const scanResult: BleDevice = {
+    deviceId: 'XX:XX:XX:XX:XX:XX',
+    name: 'Nano X BXAX',
   }
 
   describe("Device available and already paired", () => {
@@ -89,7 +86,7 @@ describe("BleTransport connectivity test coverage", () => {
 
     it("should be disconnectable, and cleanup", async () => {
       const transport = await BleTransport.open(scanResult);
-      await BleTransport.disconnect(scanResult.device.deviceId)
+      await BleTransport.disconnect(scanResult.deviceId)
       expect(transport.isConnected).toBe(false);
     });
 
@@ -135,7 +132,7 @@ describe("BleTransport connectivity test coverage", () => {
 
       expect(transport.disconnectTimeout).not.toBe(undefined);
       expect((transport.disconnectTimeout as Timeout)._destroyed).toBe(false);
-      await BleTransport.disconnect(scanResult.device.deviceId);
+      await BleTransport.disconnect(scanResult.deviceId);
       expect((transport.disconnectTimeout as Timeout)._destroyed).toBe(true);
     });
 
@@ -150,7 +147,7 @@ describe("BleTransport connectivity test coverage", () => {
     it("should throw on exchanges if disconnected", async () => {
       const transport = await BleTransport.open(scanResult);
       expect(transport.isConnected).toBe(true);
-      await BleTransport.disconnect(scanResult.device.deviceId);
+      await BleTransport.disconnect(scanResult.deviceId);
       expect(transport.isConnected).toBe(false);
       await expect(transport.exchange(Buffer.from("b010000000", "hex"))).rejects.toThrow(); // More specific errors some day.
     });
