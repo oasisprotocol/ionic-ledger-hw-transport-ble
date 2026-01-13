@@ -22,7 +22,7 @@ import {
   TransportError,
   DisconnectedDeviceDuringOperation,
 } from "@ledgerhq/errors";
-import {ScanResult} from "@capacitor-community/bluetooth-le/dist/esm/definitions";
+import {BleDevice} from "@capacitor-community/bluetooth-le/dist/esm/definitions";
 
 const TAG = "ble-verbose";
 
@@ -45,7 +45,7 @@ export const monitorCharacteristic = (
   });
 }
 
-
+let previousScanResult: BleDevice | null = null;
 const transportsCache: { [deviceId: string]: BleTransport } = {};
 
 let _bleClient: typeof BleClient | null = null;
@@ -68,14 +68,14 @@ const clearDisconnectTimeout = (deviceId: string): void => {
   }
 };
 
-const open = async (scanResult: ScanResult): Promise<BleTransport> => {
+const open = async (scanResult: BleDevice): Promise<BleTransport> => {
   log(TAG, `Tries to open device: ${scanResult}`);
 
   const closedSubscription = new Subject<void>()
 
   try {
     log(TAG, `connectToDevice(${scanResult})`);
-    await BleTransport.connect(scanResult.device.deviceId, () => {
+    await BleTransport.connect(scanResult.deviceId, () => {
       closedSubscription.next()
     })
   } catch (error) {
@@ -84,17 +84,22 @@ const open = async (scanResult: ScanResult): Promise<BleTransport> => {
     throw new CantOpenDevice();
   }
 
-  let bluetoothInfos: BluetoothInfos | undefined;
-  let characteristics: string[] | undefined = [];
 
+  let availableServiceUuids: string[] = [];
+  try {
+    // scanResult.uuids seems to be missing when coming from requestDevice
+    const services = await bleInstance().getServices(scanResult.deviceId);
+    availableServiceUuids = services.map(service => service.uuid);
+    log(TAG, `Discovered services: ${JSON.stringify(availableServiceUuids)}`);
+  } catch (error) {
+    log(TAG, `Failed to get services: ${String(error)}`);
+  }
+
+  let bluetoothInfos: BluetoothInfos | undefined;
   for (const uuid of getBluetoothServiceUuids()) {
-    if (scanResult.uuids) {
-      const peripheralCharacteristic = scanResult.uuids.filter((service) => service === uuid);
-      if (peripheralCharacteristic.length) {
-        characteristics.push(...peripheralCharacteristic)
-        bluetoothInfos = getInfosForServiceUuid(uuid);
-        break;
-      }
+    if (availableServiceUuids.includes(uuid)) {
+      bluetoothInfos = getInfosForServiceUuid(uuid);
+      break;
     }
   }
 
@@ -103,19 +108,6 @@ const open = async (scanResult: ScanResult): Promise<BleTransport> => {
   }
 
   const {deviceModel, serviceUuid, writeUuid, writeCmdUuid, notifyUuid} = bluetoothInfos;
-
-  if (!characteristics) {
-    if (scanResult.uuids) {
-      const characteristic = scanResult.uuids.find((uuid) => uuid === serviceUuid)
-      if (characteristic) {
-        characteristics = [characteristic];
-      }
-    }
-  }
-
-  if (!characteristics.length) {
-    throw new TransportError("service not found", "BLEServiceNotFound");
-  }
 
   if (!writeUuid) {
     throw new TransportError(
@@ -138,7 +130,7 @@ const open = async (scanResult: ScanResult): Promise<BleTransport> => {
     );
   }
 
-  const notifyObservable = monitorCharacteristic(scanResult.device.deviceId, serviceUuid, notifyUuid).pipe(
+  const notifyObservable = monitorCharacteristic(scanResult.deviceId, serviceUuid, notifyUuid).pipe(
     share()
   );
   const notifySubscription = notifyObservable.subscribe();
@@ -185,35 +177,29 @@ export default class BleTransport extends Transport {
     return bleInstance().connect(deviceId, onDisconnect);
   }
 
-  static list = (stopScanTimeout = BleTransport.disconnectTimeoutMs): Promise<ScanResult[]> => {
-    let devices: ScanResult[] = []
-
-    return new Promise((resolve, reject) => {
-      bleInstance().requestLEScan({services: getBluetoothServiceUuids()}, data => {
-        devices = [
-          ...devices.filter(prevDevice => prevDevice.device.deviceId !== data.device.deviceId),
-          data
-        ]
-
+  static async create(): Promise<BleTransport> {
+    log(TAG, "Requesting BLE device");
+    try {
+      // Similar to TransportWebUSB.create > TransportWebUSB.listen > getFirstLedgerDevice > navigator.usb.getDevices[0] || navigator.usb.requestDevice
+      const scanResult =
+        (await bleInstance().getConnectedDevices(getBluetoothServiceUuids()))?.[0] || // If not `BleTransport.disconnect`-ed yet
+        previousScanResult || // If disconnected but device is still findable
+        (await bleInstance().requestDevice({ services: getBluetoothServiceUuids() })); // Shows native device selection UI
+      log(TAG, `BLE device selected: ${scanResult.deviceId}`);
+      return open(scanResult).catch(async () => {
+        // Possibly failed just because previousScanResult is offline (after 10s default timeout). Try to request device again before fully failing.
+        return open(await bleInstance().requestDevice({ services: getBluetoothServiceUuids() }));
+      }).then((transport) => {
+        previousScanResult = transport.device;
+        return transport;
       });
+    } catch (err) {
+      log(TAG, `BLE device request failed: ${String(err)}`);
+      throw new CantOpenDevice(String(err));
+    }
+  }
 
-      setTimeout(async () => {
-          await bleInstance().stopLEScan()
-          try {
-            log(TAG, 'BLE scan complete')
-            resolve(devices);
-          } catch (err) {
-            log(TAG, 'BLE scan failed')
-            reject(err)
-          }
-        },
-        stopScanTimeout,
-      );
-
-    })
-  };
-
-  static async open(scanResult: ScanResult): Promise<BleTransport> {
+  static async open(scanResult: BleDevice): Promise<BleTransport> {
     return open(scanResult);
   }
 
@@ -227,7 +213,7 @@ export default class BleTransport extends Transport {
     log(TAG, "disconnected");
   };
 
-  device: ScanResult;
+  device: BleDevice;
   deviceModel: DeviceModel;
   disconnectTimeout: null | ReturnType<typeof setTimeout> = null;
   id: string;
@@ -239,7 +225,7 @@ export default class BleTransport extends Transport {
   bluetoothInfos: BluetoothInfos;
 
   constructor(
-    device: ScanResult,
+    device: BleDevice,
     writeCharacteristic: string,
     writeCmdCharacteristic: string | undefined,
     notifyObservable: Observable<Buffer>,
@@ -247,7 +233,7 @@ export default class BleTransport extends Transport {
     bluetoothInfos: BluetoothInfos
   ) {
     super();
-    this.id = device.device.deviceId;
+    this.id = device.deviceId;
     this.device = device;
     this.writeCharacteristic = writeCharacteristic;
     this.writeCmdCharacteristic = writeCmdCharacteristic;
@@ -327,7 +313,7 @@ export default class BleTransport extends Transport {
         log("ble-error", "inferMTU got " + JSON.stringify(e));
 
         try {
-          await bleInstance().disconnect(this.device.device.deviceId)
+          await bleInstance().disconnect(this.device.deviceId)
         } catch (ex) {
           // Ignore error
         }
@@ -354,14 +340,14 @@ export default class BleTransport extends Transport {
     if (this.writeCmdCharacteristic) {
       try {
         const data = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
-        return await bleInstance().writeWithoutResponse(this.device.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeCmdUuid, data)
+        return await bleInstance().writeWithoutResponse(this.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeCmdUuid, data)
       } catch (e) {
         throw new DisconnectedDeviceDuringOperation(String(e));
       }
     } else {
       try {
         const data = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength)
-        return await bleInstance().write(this.device.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeUuid, data)
+        return await bleInstance().write(this.device.deviceId, this.bluetoothInfos.serviceUuid, this.bluetoothInfos.writeUuid, data)
       } catch (e) {
         throw new DisconnectedDeviceDuringOperation(String(e));
       }

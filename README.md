@@ -23,7 +23,9 @@ yarn add @oasisprotocol/ionic-ledger-hw-transport-ble
 
 `@oasisprotocol/ionic-ledger-hw-transport-ble` works like any of `@ledgerhq/hw-transport` libraries.
 
-The difference here is that the list() is costy and you likely don't want to always scan for devices, you would better save a selected device as "known" to suggest it to user later.
+The difference here is that the `list()` is not implemented, only `create()`.
+Create doesn't always scan for devices, it tries to reuse previously selected
+device.
 
 > Important: you will also have to deal with specifics of Bluetooth BLE, for instance, you need to request the LOCATION permission on Android!
 
@@ -41,17 +43,10 @@ BleTransport.isSupported()
 BleTransport.isEnabled()
 ```
 
-### Scan for devices
-
-```ts
-const scannedDevices = BleTransport.list()
-```
-
 ### Connect to device
 
 ```ts
-const [scannedDevice] = scannedDevices
-const transport = await BleTransport.open(scannedDevice)
+const transport = await BleTransport.create()
 ```
 
 **and now we can just use the transport like any other Ledger transport!**
