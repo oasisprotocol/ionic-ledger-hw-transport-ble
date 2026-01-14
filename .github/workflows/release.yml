@@ -17,7 +17,8 @@ jobs:
     name: prepare-release
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      id-token: write  # Required for OIDC https://docs.npmjs.com/trusted-publishers#supported-cicd-providers
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -32,8 +33,6 @@ jobs:
       - name: Build app
         run: yarn build
       - name: Publish release on NPM
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc && \
           yarn publish \
