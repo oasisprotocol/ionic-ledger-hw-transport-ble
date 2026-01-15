@@ -32,6 +32,6 @@ jobs:
         run: yarn build
       - name: Publish release on NPM
         run: |
-          yarn publish \
+          npm publish \
             --tag latest \
             --access public
