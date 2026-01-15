@@ -21,6 +21,7 @@ import {
   CantOpenDevice,
   TransportError,
   DisconnectedDeviceDuringOperation,
+  BluetoothRequired,
 } from "@ledgerhq/errors";
 import {BleDevice} from "@capacitor-community/bluetooth-le/dist/esm/definitions";
 
@@ -178,6 +179,10 @@ export default class BleTransport extends Transport {
   }
 
   static async create(): Promise<BleTransport> {
+    await bleInstance().requestEnable();
+    const isEnabled = await bleInstance().isEnabled();
+    if (!isEnabled) throw new BluetoothRequired("Bluetooth is not enabled");
+
     log(TAG, "Requesting BLE device");
     try {
       // Similar to TransportWebUSB.create > TransportWebUSB.listen > getFirstLedgerDevice > navigator.usb.getDevices[0] || navigator.usb.requestDevice
