@@ -178,6 +178,17 @@ export default class BleTransport extends Transport {
     return bleInstance().connect(deviceId, onDisconnect);
   }
 
+  /**
+   * Register a callback function that will be invoked when Bluetooth is enabled (true) or disabled (false) on this device.
+   * Not available on **web** (the callback will never be invoked).
+   * @param callback Callback function to use when the Bluetooth state changes.
+   */
+  static startEnabledNotifications = (callback: (value: boolean) => void) => bleInstance().startEnabledNotifications(callback)
+  /**
+   * Stop the enabled notifications registered with `startEnabledNotifications`.
+   */
+  static stopEnabledNotifications = () => bleInstance().stopEnabledNotifications()
+
   static async create(): Promise<BleTransport> {
     await bleInstance().requestEnable();
     const isEnabled = await bleInstance().isEnabled();
