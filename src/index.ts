@@ -198,7 +198,6 @@ export default class BleTransport extends Transport {
     try {
       // Similar to TransportWebUSB.create > TransportWebUSB.listen > getFirstLedgerDevice > navigator.usb.getDevices[0] || navigator.usb.requestDevice
       const scanResult =
-        (await bleInstance().getConnectedDevices(getBluetoothServiceUuids()))?.[0] || // If not `BleTransport.disconnect`-ed yet
         previousScanResult || // If disconnected but device is still findable
         (await bleInstance().requestDevice({ services: getBluetoothServiceUuids() })); // Shows native device selection UI
       log(TAG, `BLE device selected: ${scanResult.deviceId}`);
