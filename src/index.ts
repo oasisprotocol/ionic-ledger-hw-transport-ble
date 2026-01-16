@@ -41,7 +41,11 @@ export const monitorCharacteristic = (
     })
 
     return async () => {
-      await BleClient.stopNotifications(deviceId, service, characteristic);
+      try {
+        await BleClient.stopNotifications(deviceId, service, characteristic);
+      } catch (e) {
+        console.warn('Ignored error: BleClient.stopNotifications', e)
+      }
     }
   });
 }
@@ -54,7 +58,7 @@ const bleInstance = (): typeof BleClient => {
   if (!_bleClient) {
     BleClient.initialize({
       androidNeverForLocation: true
-    })
+    }).catch(e => console.warn('Ignored error: BleClient.initialize', e))
     _bleClient = BleClient;
   }
 
@@ -172,7 +176,7 @@ export default class BleTransport extends Transport {
   static isSupported = (): Promise<boolean> =>
     Promise.resolve(typeof BleClient === "object");
 
-  static isEnabled = (): Promise<boolean> => bleInstance().isEnabled()
+  static isEnabled = async (): Promise<boolean> => await bleInstance().isEnabled()
 
   static connect = (deviceId: string, onDisconnect: (deviceId: string) => void): Promise<void> => {
     return bleInstance().connect(deviceId, onDisconnect);
@@ -190,7 +194,7 @@ export default class BleTransport extends Transport {
   static stopEnabledNotifications = () => bleInstance().stopEnabledNotifications()
 
   static async create(): Promise<BleTransport> {
-    await bleInstance().requestEnable();
+    await bleInstance().requestEnable().catch(_e => { /* Ignored error */});
     const isEnabled = await bleInstance().isEnabled();
     if (!isEnabled) throw new BluetoothRequired("Bluetooth is not enabled");
 
