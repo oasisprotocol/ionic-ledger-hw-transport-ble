@@ -17,11 +17,13 @@ jobs:
     name: prepare-release
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Required for OIDC https://docs.npmjs.com/trusted-publishers#supported-cicd-providers
+      id-token: write # Required for OIDC https://docs.npmjs.com/trusted-publishers#supported-cicd-providers
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: yarn
